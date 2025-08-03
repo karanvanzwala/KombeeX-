@@ -445,28 +445,6 @@ export default function ProductDetailsClient({
               )}
 
               {/* Attributes */}
-              {product.attributes && product.attributes.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                    Product Details
-                  </h3>
-                  <div className="space-y-2">
-                    {product.attributes.map((attr: any) => (
-                      <div
-                        key={attr.attribute.id}
-                        className="flex justify-between text-sm"
-                      >
-                        <span className="text-gray-600">
-                          {attr.attribute.name}:
-                        </span>
-                        <span className="text-gray-900 font-medium">
-                          {attr.values.map((val: any) => val.name).join(", ")}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Quantity & Add to Cart */}
               <div className="space-y-4">
