@@ -33,7 +33,45 @@ interface CartState {
   closeCart: () => void;
   getItemQuantity: (itemId: string) => number;
   getItemTotal: (itemId: string) => number;
+  syncLocalStorageCart: () => void;
+  clearLocalStorageCart: () => void;
+  addItemToLocalStorage: (item: CartItem) => void;
+  getLocalStorageCartCount: () => number;
 }
+
+// Helper functions for localStorage operations
+const getLocalStorageCart = (): CartItem[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const cart = localStorage.getItem('local-cart');
+    return cart ? JSON.parse(cart) : [];
+  } catch (error) {
+    console.error('Error reading localStorage cart:', error);
+    return [];
+  }
+};
+
+const setLocalStorageCart = (items: CartItem[]): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('local-cart', JSON.stringify(items));
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('localStorageCartUpdated', { detail: items }));
+  } catch (error) {
+    console.error('Error writing to localStorage cart:', error);
+  }
+};
+
+const clearLocalStorageCart = (): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem('local-cart');
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('localStorageCartUpdated', { detail: [] }));
+  } catch (error) {
+    console.error('Error clearing localStorage cart:', error);
+  }
+};
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -44,11 +82,13 @@ export const useCartStore = create<CartState>()(
 
       // Computed values
       get totalItems() {
-        return get().items.reduce((total, item) => total + item.quantity, 0);
+        const state = get();
+        return state.items.reduce((total, item) => total + item.quantity, 0);
       },
 
       get totalPrice() {
-        return get().items.reduce((total, item) => total + (item.price * item.quantity), 0);
+        const state = get();
+        return state.items.reduce((total, item) => total + (item.price * item.quantity), 0);
       },
 
       // Actions
@@ -58,25 +98,39 @@ export const useCartStore = create<CartState>()(
             (item) => item.id === newItem.id
           );
 
+          let updatedItems;
           if (existingItemIndex > -1) {
             // Update existing item quantity
-            const updatedItems = [...state.items];
+            updatedItems = [...state.items];
             updatedItems[existingItemIndex] = {
               ...updatedItems[existingItemIndex],
               quantity: updatedItems[existingItemIndex].quantity + newItem.quantity,
             };
-            return { items: updatedItems };
           } else {
             // Add new item
-            return { items: [...state.items, newItem] };
+            updatedItems = [...state.items, newItem];
           }
+
+          // Dispatch custom event to notify other components
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('cartUpdated', { detail: updatedItems }));
+          }
+
+          return { items: updatedItems };
         });
       },
 
       removeItem: (itemId: string) => {
-        set((state) => ({
-          items: state.items.filter((item) => item.id !== itemId),
-        }));
+        set((state) => {
+          const updatedItems = state.items.filter((item) => item.id !== itemId);
+          
+          // Dispatch custom event to notify other components
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('cartUpdated', { detail: updatedItems }));
+          }
+
+          return { items: updatedItems };
+        });
       },
 
       updateQuantity: (itemId: string, quantity: number) => {
@@ -85,15 +139,29 @@ export const useCartStore = create<CartState>()(
           return;
         }
 
-        set((state) => ({
-          items: state.items.map((item) =>
+        set((state) => {
+          const updatedItems = state.items.map((item) =>
             item.id === itemId ? { ...item, quantity } : item
-          ),
-        }));
+          );
+
+          // Dispatch custom event to notify other components
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('cartUpdated', { detail: updatedItems }));
+          }
+
+          return { items: updatedItems };
+        });
       },
 
       clearCart: () => {
         set({ items: [] });
+        // Also clear localStorage cart when clearing main cart
+        clearLocalStorageCart();
+        
+        // Dispatch custom event to notify other components
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('cartUpdated', { detail: [] }));
+        }
       },
 
       toggleCart: () => {
@@ -116,6 +184,64 @@ export const useCartStore = create<CartState>()(
       getItemTotal: (itemId: string) => {
         const item = get().items.find((item) => item.id === itemId);
         return item ? item.price * item.quantity : 0;
+      },
+
+      // New methods for localStorage cart management
+      syncLocalStorageCart: () => {
+        const localCartItems = getLocalStorageCart();
+        if (localCartItems.length > 0) {
+          set((state) => {
+            // Merge localStorage items with existing cart items
+            const mergedItems = [...state.items];
+            
+            localCartItems.forEach((localItem) => {
+              const existingIndex = mergedItems.findIndex(item => item.id === localItem.id);
+              if (existingIndex > -1) {
+                // Merge quantities if item already exists
+                mergedItems[existingIndex].quantity += localItem.quantity;
+              } else {
+                // Add new item
+                mergedItems.push(localItem);
+              }
+            });
+            
+            return { items: mergedItems };
+          });
+          
+          // Clear localStorage cart after syncing
+          clearLocalStorageCart();
+        }
+      },
+
+      clearLocalStorageCart: () => {
+        clearLocalStorageCart();
+      },
+
+      addItemToLocalStorage: (newItem: CartItem) => {
+        const currentLocalCart = getLocalStorageCart();
+        const existingItemIndex = currentLocalCart.findIndex(
+          (item) => item.id === newItem.id
+        );
+
+        let updatedLocalCart;
+        if (existingItemIndex > -1) {
+          // Update existing item quantity
+          updatedLocalCart = [...currentLocalCart];
+          updatedLocalCart[existingItemIndex] = {
+            ...updatedLocalCart[existingItemIndex],
+            quantity: updatedLocalCart[existingItemIndex].quantity + newItem.quantity,
+          };
+        } else {
+          // Add new item
+          updatedLocalCart = [...currentLocalCart, newItem];
+        }
+
+        setLocalStorageCart(updatedLocalCart);
+      },
+
+      getLocalStorageCartCount: () => {
+        const localCartItems = getLocalStorageCart();
+        return localCartItems.reduce((total, item) => total + item.quantity, 0);
       },
     }),
     {

@@ -2,6 +2,20 @@
 
 import { useCartStore, useAuthStore } from "../stores/index";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+  variant?: {
+    id: string;
+    name: string;
+    sku: string;
+  };
+}
 
 export default function Cart() {
   const {
@@ -13,11 +27,121 @@ export default function Cart() {
     updateQuantity,
     clearCart,
     closeCart,
+    addItemToLocalStorage,
+    syncLocalStorageCart,
   } = useCartStore();
   const { isAuthenticated, user } = useAuthStore();
   const router = useRouter();
 
+  // State for localStorage cart items
+  const [localCartItems, setLocalCartItems] = useState<CartItem[]>([]);
+  const [localCartTotal, setLocalCartTotal] = useState(0);
+  const [localCartTotalItems, setLocalCartTotalItems] = useState(0);
+
+  // Get localStorage cart items
+  const getLocalStorageCart = (): CartItem[] => {
+    if (typeof window === "undefined") return [];
+    try {
+      const cart = localStorage.getItem("local-cart");
+      return cart ? JSON.parse(cart) : [];
+    } catch (error) {
+      console.error("Error reading localStorage cart:", error);
+      return [];
+    }
+  };
+
+  // Update localStorage cart
+  const updateLocalStorageCart = (items: CartItem[]) => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("local-cart", JSON.stringify(items));
+    } catch (error) {
+      console.error("Error writing to localStorage cart:", error);
+    }
+  };
+
+  // Remove item from localStorage cart
+  const removeLocalCartItem = (itemId: string) => {
+    const updatedItems = localCartItems.filter((item) => item.id !== itemId);
+    setLocalCartItems(updatedItems);
+    updateLocalStorageCart(updatedItems);
+  };
+
+  // Update quantity in localStorage cart
+  const updateLocalCartQuantity = (itemId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeLocalCartItem(itemId);
+      return;
+    }
+
+    const updatedItems = localCartItems.map((item) =>
+      item.id === itemId ? { ...item, quantity } : item
+    );
+    setLocalCartItems(updatedItems);
+    updateLocalStorageCart(updatedItems);
+  };
+
+  // Clear localStorage cart
+  const clearLocalCart = () => {
+    setLocalCartItems([]);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("local-cart");
+    }
+  };
+
+  // Load localStorage cart items on component mount
+  useEffect(() => {
+    if (!isAuthenticated) {
+      const localItems = getLocalStorageCart();
+      setLocalCartItems(localItems);
+    }
+  }, [isAuthenticated]);
+
+  // Listen for custom events to open cart
+  useEffect(() => {
+    const handleOpenCart = () => {
+      // This will be handled by the cart store's openCart method
+      // The cart store should already be listening for this event
+    };
+
+    window.addEventListener("openCart", handleOpenCart);
+    return () => {
+      window.removeEventListener("openCart", handleOpenCart);
+    };
+  }, []);
+
+  // Sync localStorage cart when user logs in
+  useEffect(() => {
+    if (isAuthenticated) {
+      syncLocalStorageCart();
+    }
+  }, [isAuthenticated, syncLocalStorageCart]);
+
+  // Calculate localStorage cart totals
+  useEffect(() => {
+    const total = localCartItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+    const totalItems = localCartItems.reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
+    setLocalCartTotal(total);
+    setLocalCartTotalItems(totalItems);
+  }, [localCartItems]);
+
   if (!isOpen) return null;
+
+  // Use appropriate cart data based on authentication status
+  const displayItems = isAuthenticated ? items : localCartItems;
+  const displayTotalItems = isAuthenticated ? totalItems : localCartTotalItems;
+  const displayTotalPrice = isAuthenticated ? totalPrice : localCartTotal;
+  const handleRemoveItem = isAuthenticated ? removeItem : removeLocalCartItem;
+  const handleUpdateQuantity = isAuthenticated
+    ? updateQuantity
+    : updateLocalCartQuantity;
+  const handleClearCart = isAuthenticated ? clearCart : clearLocalCart;
 
   const handleCheckout = () => {
     if (!isAuthenticated) {
@@ -56,6 +180,9 @@ export default function Cart() {
               {isAuthenticated && (
                 <p className="text-sm text-blue-600 mt-1">{user?.email}</p>
               )}
+              {!isAuthenticated && (
+                <p className="text-sm text-yellow-600 mt-1">Guest Cart</p>
+              )}
             </div>
             <button
               onClick={closeCart}
@@ -79,7 +206,7 @@ export default function Cart() {
 
           {/* Cart Items */}
           <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-            {items.length === 0 ? (
+            {displayItems.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-gray-400 text-6xl mb-4">🛒</div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -100,7 +227,7 @@ export default function Cart() {
               </div>
             ) : (
               <div className="space-y-4">
-                {items.map((item) => (
+                {displayItems.map((item) => (
                   <div
                     key={item.id}
                     className="flex items-center space-x-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100"
@@ -139,7 +266,7 @@ export default function Cart() {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() =>
-                          updateQuantity(item.id, item.quantity - 1)
+                          handleUpdateQuantity(item.id, item.quantity - 1)
                         }
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors duration-200"
                       >
@@ -162,7 +289,7 @@ export default function Cart() {
                       </span>
                       <button
                         onClick={() =>
-                          updateQuantity(item.id, item.quantity + 1)
+                          handleUpdateQuantity(item.id, item.quantity + 1)
                         }
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors duration-200"
                       >
@@ -184,7 +311,7 @@ export default function Cart() {
 
                     {/* Remove Button */}
                     <button
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => handleRemoveItem(item.id)}
                       className="text-red-500 hover:text-red-700 transition-colors duration-200 p-1"
                     >
                       <svg
@@ -208,15 +335,16 @@ export default function Cart() {
           </div>
 
           {/* Footer */}
-          {items.length > 0 && (
+          {displayItems.length > 0 && (
             <div className="border-t border-gray-200 p-6 bg-white">
               {/* Summary */}
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm text-gray-600">
-                  {totalItems} {totalItems === 1 ? "item" : "items"}
+                  {displayTotalItems}{" "}
+                  {displayTotalItems === 1 ? "item" : "items"}
                 </span>
                 <span className="text-lg font-semibold text-gray-900">
-                  ${totalPrice.toFixed(2)}
+                  ${displayTotalPrice.toFixed(2)}
                 </span>
               </div>
 
@@ -270,7 +398,7 @@ export default function Cart() {
                 )}
 
                 <button
-                  onClick={clearCart}
+                  onClick={handleClearCart}
                   className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors duration-200"
                 >
                   Clear Cart

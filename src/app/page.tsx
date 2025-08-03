@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useCartStore, useAuthStore } from "../stores/index";
 import Layout from "../components/Layout";
 import ProductCard from "../components/ProductCard";
+import Carousel from "../components/Carousel";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -206,11 +207,11 @@ export default function HomePage() {
       )}
 
       {/* Hero Banner */}
-      <div className="relative bg-gradient-to-r from-purple-900 via-pink-800 to-red-900 overflow-hidden">
+      {/* <div className="relative bg-gradient-to-r from-purple-900 via-pink-800 to-red-900 overflow-hidden">
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left Side - Text Content */}
+            
             <div className="text-white space-y-6">
               <div className="space-y-4">
                 <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
@@ -235,81 +236,56 @@ export default function HomePage() {
                   VIEW COLLECTION
                 </button>
               </div>
-
-              <p className="text-sm text-gray-300">*Conditions apply</p>
             </div>
 
-            {/* Right Side - Product Showcase */}
-            <div className="relative">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                    <div className="text-4xl mb-2">💎</div>
-                    <h3 className="text-white font-semibold">
-                      Diamond Ear Cuffs
-                    </h3>
-                    <p className="text-gray-300 text-sm">Elegant & Modern</p>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                    <div className="text-4xl mb-2">💍</div>
-                    <h3 className="text-white font-semibold">
-                      Diamond Bracelets
-                    </h3>
-                    <p className="text-gray-300 text-sm">Timeless Beauty</p>
-                  </div>
-                </div>
-                <div className="space-y-4 pt-8">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                    <div className="text-4xl mb-2">👑</div>
-                    <h3 className="text-white font-semibold">
-                      Royal Collection
-                    </h3>
-                    <p className="text-gray-300 text-sm">Premium Quality</p>
-                  </div>
-                </div>
-              </div>
+          
+          </div>
+        </div>
+      </div> */}
+
+      {/* Hero Banner */}
+      <div className="bg-[#fefcfb]">
+        <div className="max-w-7xl mx-auto px-6 py-24 grid grid-cols-1 md:grid-cols-2 items-center gap-12">
+          {/* Left Side: Text */}
+          <div className="space-y-6">
+            <h1 className="text-5xl font-bold text-gray-900 leading-tight">
+              Festival of <span className="text-yellow-500">Diamonds</span>
+            </h1>
+            <p className="text-lg text-gray-700">
+              <span className="text-red-500 font-semibold">Up to 20% OFF</span>{" "}
+              on 10,000+ timeless designs
+            </p>
+            <p className="text-gray-500">
+              Discover our hand-picked fine jewelry collection crafted for
+              elegance and charm.
+            </p>
+
+            <div className="flex gap-4 mt-6">
+              <button
+                className="bg-black text-white cursor-pointer px-6 py-3 rounded-lg shadow hover:bg-gray-800 transition"
+                onClick={() => {
+                  router.push(`/products/`);
+                }}
+              >
+                Shop Now
+              </button>
             </div>
+          </div>
+
+          {/* Right Side: Image */}
+          <div className=" justify-center md:flex hidden">
+            <img
+              src="/ring.png" // Replace with actual image
+              alt="Featured Jewelry"
+              className="w-full max-w-sm "
+            />
           </div>
         </div>
       </div>
 
-      {/* Category Navigation */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center space-x-8 overflow-x-auto scrollbar-hide">
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${
-                    selectedCategory === category.id
-                      ? `${category.color} text-white shadow-lg`
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                  }`}
-                >
-                  <span className="text-lg">{category.icon}</span>
-                  <span className="font-medium">{category.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Featured Products Section */}
+      {/* Carousel Test Section */}
       <div className="bg-gradient-to-br from-slate-50 to-slate-100 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Featured Collections
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Discover our most popular jewelry pieces, carefully crafted for
-              the modern woman
-            </p>
-          </div>
-
           {productsLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="text-center">
@@ -418,7 +394,7 @@ export default function HomePage() {
       )}
 
       {/* Newsletter Section */}
-      <div className="bg-gradient-to-r from-purple-900 to-pink-900 py-16">
+      {/* <div className="bg-gradient-to-r from-purple-900 to-pink-900 py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Stay Updated</h2>
           <p className="text-xl text-gray-200 mb-8">
@@ -435,7 +411,7 @@ export default function HomePage() {
             </button>
           </div>
         </div>
-      </div>
+      </div> */}
     </Layout>
   );
 }

@@ -1,16 +1,62 @@
 "use client";
 
-import { useAuthStore } from "../stores/index";
+import { useAuthStore, useCartStore } from "../stores/index";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function Navigation() {
   const { isAuthenticated, user, logout } = useAuthStore();
+  const { totalItems, toggleCart } = useCartStore();
+
+  // State for localStorage cart count
+  const [localCartCount, setLocalCartCount] = useState(0);
+
+  // Get localStorage cart count
+  const getLocalStorageCartCount = (): number => {
+    if (typeof window === "undefined") return 0;
+    try {
+      const cart = localStorage.getItem("local-cart");
+      if (!cart) return 0;
+      const items = JSON.parse(cart);
+      return items.reduce(
+        (total: number, item: any) => total + item.quantity,
+        0
+      );
+    } catch (error) {
+      console.error("Error reading localStorage cart count:", error);
+      return 0;
+    }
+  };
+
+  // Update localStorage cart count
+  useEffect(() => {
+    if (!isAuthenticated) {
+      const count = getLocalStorageCartCount();
+      setLocalCartCount(count);
+    }
+  }, [isAuthenticated]);
+
+  // Listen for localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      if (!isAuthenticated) {
+        const count = getLocalStorageCartCount();
+        setLocalCartCount(count);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [isAuthenticated]);
 
   const handleLogout = () => {
     logout();
     // You might want to redirect to login page here
     window.location.href = "/login";
   };
+
+  // Use appropriate cart count based on authentication status
+  const displayCartCount = isAuthenticated ? totalItems : localCartCount;
 
   return (
     <nav className="bg-white/90 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-10">
@@ -32,16 +78,35 @@ export default function Navigation() {
             >
               Products
             </Link>
-            <Link
-              href="/cart"
-              className="text-gray-600 hover:text-blue-600 transition-colors duration-200"
-            >
-              Cart
-            </Link>
           </div>
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
+            {/* Cart Icon */}
+            <button
+              onClick={toggleCart}
+              className="relative p-2 text-gray-600 hover:text-blue-600 transition-colors duration-200"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m6 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01"
+                />
+              </svg>
+              {displayCartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {displayCartCount > 99 ? "99+" : displayCartCount}
+                </span>
+              )}
+            </button>
+
             {isAuthenticated && user ? (
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-600">

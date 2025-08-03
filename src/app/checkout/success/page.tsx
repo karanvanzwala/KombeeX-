@@ -2,8 +2,18 @@
 
 import Layout from "../../../components/Layout";
 import Link from "next/link";
+import { useEffect } from "react";
+import { useCartStore } from "../../../stores/index";
 
 export default function CheckoutSuccessPage() {
+  const { clearCart, clearLocalStorageCart } = useCartStore();
+
+  // Clear both carts when user reaches success page
+  useEffect(() => {
+    clearCart(); // This will also clear localStorage cart
+    clearLocalStorageCart(); // Extra safety to ensure localStorage is cleared
+  }, [clearCart, clearLocalStorageCart]);
+
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center py-8">

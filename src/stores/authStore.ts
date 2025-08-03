@@ -44,6 +44,15 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           error: null,
         });
+        
+        // Sync localStorage cart items after login
+        if (typeof window !== 'undefined') {
+          // Import the cart store dynamically to avoid circular dependencies
+          import('./cartStore').then(({ useCartStore }) => {
+            const cartStore = useCartStore.getState();
+            cartStore.syncLocalStorageCart();
+          });
+        }
       },
 
       logout: () => {
@@ -84,6 +93,12 @@ export const useAuthStore = create<AuthState>()(
                 token,
                 user,
                 isAuthenticated: true,
+              });
+              
+              // Sync localStorage cart items on initialization if user is authenticated
+              import('./cartStore').then(({ useCartStore }) => {
+                const cartStore = useCartStore.getState();
+                cartStore.syncLocalStorageCart();
               });
             } catch (error) {
               console.error('Error parsing user data:', error);

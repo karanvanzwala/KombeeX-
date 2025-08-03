@@ -21,31 +21,10 @@ export default function ProductsPage() {
   const { isAuthenticated, user } = useAuthStore();
   const router = useRouter();
 
-  // GraphQL mutation for adding to cart
-  const [addToCartMutation, { loading: cartLoading }] = useMutation(
-    ADD_TO_CART_MUTATION,
-    {
-      client,
-      onCompleted: (data) => {
-        if (data.checkoutCreate.checkout) {
-          console.log(
-            "Item added to cart via GraphQL:",
-            data.checkoutCreate.checkout
-          );
-        }
-      },
-      onError: (error) => {
-        console.error("Error adding to cart:", error);
-      },
-    }
-  );
-
-  console.log(data, ">>>>>");
-
   if (loading)
     return (
       <Layout>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="min-h-screen  bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600 font-medium">Loading products...</p>
@@ -65,63 +44,6 @@ export default function ProductsPage() {
         </div>
       </Layout>
     );
-
-  const handleAddToCart = async (product: any) => {
-    // Check if user is authenticated
-
-    console.log(product, "product");
-    if (!isAuthenticated) {
-      setShowLoginPrompt(true);
-      setTimeout(() => setShowLoginPrompt(false), 3000);
-      return;
-    }
-
-    try {
-      // Create a cart item from the product
-      const cartItem = {
-        id: product.id,
-        name: product.name,
-        price: 999.99, // You might want to get this from the product data
-        quantity: 1,
-        image: product.media?.[0]?.url,
-        variant: product.variants?.[0]
-          ? {
-              id: product.variants[0].id,
-              name: product.variants[0].name,
-              sku: product.variants[0].sku,
-            }
-          : undefined,
-      };
-
-      // Add to local cart store
-      addItem(cartItem);
-
-      // Try to add to server cart via GraphQL
-      if (product.variants && product.variants.length > 0) {
-        await addToCartMutation({
-          variables: {
-            input: {
-              lines: [
-                {
-                  quantity: 1,
-                  variantId: product.variants[0].id,
-                },
-              ],
-            },
-          },
-        });
-      }
-
-      // Show success message
-      setAddedToCartMessage(`${product.name} added to cart!`);
-      setTimeout(() => setAddedToCartMessage(null), 2000);
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-      // Still show success message for local cart
-      setAddedToCartMessage(`${product.name} added to cart!`);
-      setTimeout(() => setAddedToCartMessage(null), 2000);
-    }
-  };
 
   const handleLoginRedirect = () => {
     router.push("/login");
@@ -180,7 +102,7 @@ export default function ProductsPage() {
       )}
 
       {/* Products Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mt-[70px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {data.products.edges.map(({ node }: any, index: number) => (
             <ProductCard

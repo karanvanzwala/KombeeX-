@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@apollo/client";
 import { ADD_TO_CART_MUTATION } from "../../../../graphql/ADD_TO_CART_MUTATION";
 import client from "../../../../lib/apollo-client";
 import { useCartStore, useAuthStore } from "../../../stores/index";
 import Layout from "../../../components/Layout";
 import { useRouter } from "next/navigation";
+import ProductDetailsDebug from "../../../components/ProductDetailsDebug";
 
 interface ProductDetailsClientProps {
   product: any;
@@ -24,8 +25,11 @@ export default function ProductDetailsClient({
   const [addedToCartMessage, setAddedToCartMessage] = useState<string | null>(
     null
   );
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [showCheckoutButton, setShowCheckoutButton] = useState(false);
 
-  const { addItem, getItemQuantity } = useCartStore();
+  const { addItem, getItemQuantity, addItemToLocalStorage, totalItems } =
+    useCartStore();
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
 
@@ -35,31 +39,82 @@ export default function ProductDetailsClient({
     {
       client,
       onCompleted: (data) => {
+        console.log("GraphQL mutation completed:", data);
         if (data.checkoutCreate.checkout) {
           console.log(
             "Item added to cart via GraphQL:",
             data.checkoutCreate.checkout
           );
+          setAddedToCartMessage(`${product.name} added to cart!`);
+          setShowCheckoutButton(true);
+          setTimeout(() => setAddedToCartMessage(null), 3000);
+        } else if (
+          data.checkoutCreate.errors &&
+          data.checkoutCreate.errors.length > 0
+        ) {
+          console.error("GraphQL errors:", data.checkoutCreate.errors);
         }
       },
       onError: (error) => {
-        console.error("Error adding to cart:", error);
+        console.error("Error adding to cart via GraphQL:", error);
+        console.error(
+          "Error details:",
+          error.graphQLErrors,
+          error.networkError
+        );
+        // Still show success for local cart
+        setAddedToCartMessage(`${product.name} added to cart!`);
+        setShowCheckoutButton(true);
+        setTimeout(() => setAddedToCartMessage(null), 3000);
       },
     }
   );
 
+  // Calculate total price based on selected variant and quantity
+  const calculateTotalPrice = () => {
+    const basePrice = selectedVariant?.pricing?.price?.gross?.amount || 99999; // 999.99 in cents
+    return (basePrice / 100) * quantity;
+  };
+
+  // Calculate discounted price if available
+  const calculateDiscountedPrice = () => {
+    const originalPrice =
+      selectedVariant?.pricing?.priceUndiscounted?.gross?.amount || 99999;
+    const currentPrice =
+      selectedVariant?.pricing?.price?.gross?.amount || 99999;
+    return (originalPrice / 100) * quantity;
+  };
+
+  // Check if there's a discount
+  const hasDiscount = () => {
+    const originalPrice =
+      selectedVariant?.pricing?.priceUndiscounted?.gross?.amount;
+    const currentPrice = selectedVariant?.pricing?.price?.gross?.amount;
+    return originalPrice && currentPrice && originalPrice > currentPrice;
+  };
+
+  // Get current item quantity in cart
+  const getCurrentItemQuantity = () => {
+    return getItemQuantity(selectedVariant?.id || product.id);
+  };
+
   const handleAddToCart = async () => {
+    if (isAddingToCart) return; // Prevent multiple clicks
+
+    setIsAddingToCart(true);
+
     if (!isAuthenticated) {
       setShowLoginPrompt(true);
       setTimeout(() => setShowLoginPrompt(false), 3000);
+      setIsAddingToCart(false);
       return;
     }
 
     try {
       const cartItem = {
-        id: product.id,
+        id: selectedVariant?.id || product.id,
         name: product.name,
-        price: selectedVariant?.pricing?.price?.gross?.amount || 999.99,
+        price: (selectedVariant?.pricing?.price?.gross?.amount || 99999) / 100,
         quantity: quantity,
         image:
           product.media?.[selectedImageIndex]?.url || product.media?.[0]?.url,
@@ -72,31 +127,51 @@ export default function ProductDetailsClient({
           : undefined,
       };
 
-      addItem(cartItem);
+      if (!isAuthenticated) {
+        // Add to localStorage cart for non-authenticated users
+        addItemToLocalStorage(cartItem);
+        console.log("Item added to localStorage cart");
+        setAddedToCartMessage(`${product.name} added to cart!`);
+        setShowCheckoutButton(true);
+        setTimeout(() => setAddedToCartMessage(null), 3000);
+      } else {
+        // Add to main cart store for authenticated users
+        addItem(cartItem);
 
-      // Try to add to server cart via GraphQL
-      if (selectedVariant) {
-        await addToCartMutation({
-          variables: {
-            input: {
-              lines: [
-                {
-                  quantity: quantity,
-                  variantId: selectedVariant.id,
-                },
-              ],
+        // Try to add to server cart via GraphQL
+        if (selectedVariant) {
+          await addToCartMutation({
+            variables: {
+              input: {
+                lines: [
+                  {
+                    quantity: quantity,
+                    variantId: selectedVariant.id,
+                  },
+                ],
+              },
             },
-          },
-        });
+          });
+        }
       }
-
-      setAddedToCartMessage(`${product.name} added to cart!`);
-      setTimeout(() => setAddedToCartMessage(null), 2000);
     } catch (error) {
       console.error("Error adding to cart:", error);
       setAddedToCartMessage(`${product.name} added to cart!`);
-      setTimeout(() => setAddedToCartMessage(null), 2000);
+      setShowCheckoutButton(true);
+      setTimeout(() => setAddedToCartMessage(null), 3000);
+    } finally {
+      setIsAddingToCart(false);
     }
+  };
+
+  const handleCheckout = () => {
+    router.push("/checkout");
+  };
+
+  const handleViewCart = () => {
+    // This will open the cart sidebar
+    const event = new CustomEvent("openCart");
+    window.dispatchEvent(event);
   };
 
   const handleLoginRedirect = () => {
@@ -108,7 +183,12 @@ export default function ProductDetailsClient({
     return `$${(price.gross.amount / 100).toFixed(2)}`;
   };
 
-  const isInCart = getItemQuantity(product.id) > 0;
+  const isInCart = getCurrentItemQuantity() > 0;
+
+  // Reset checkout button when variant changes
+  useEffect(() => {
+    setShowCheckoutButton(false);
+  }, [selectedVariant]);
 
   return (
     <Layout>
@@ -162,7 +242,7 @@ export default function ProductDetailsClient({
         </div>
       )}
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8">
+      <div className="min-h-screen bg-gradient-to-br mt-10 from-slate-50 to-slate-100 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Breadcrumb */}
           <nav className="flex mb-8" aria-label="Breadcrumb">
@@ -209,7 +289,10 @@ export default function ProductDetailsClient({
                       clipRule="evenodd"
                     ></path>
                   </svg>
-                  <span className="text-gray-500">{product.name}</span>
+                  <span className="text-gray-500 uppercase  tracking-wide truncate">
+                    {/* {product.name} */}
+                    Product Details
+                  </span>
                 </div>
               </li>
             </ol>
@@ -275,29 +358,49 @@ export default function ProductDetailsClient({
                 )}
               </div>
 
-              {/* Price */}
-              <div className="space-y-2">
+              {/* Price Section */}
+              <div className="space-y-3">
                 <div className="flex items-center space-x-4">
                   <span className="text-3xl font-bold text-gray-900">
                     {formatPrice(selectedVariant?.pricing?.price)}
                   </span>
-                  {selectedVariant?.pricing?.priceUndiscounted?.gross
-                    ?.amount !==
-                    selectedVariant?.pricing?.price?.gross?.amount && (
+                  {hasDiscount() && (
                     <span className="text-xl text-gray-500 line-through">
                       {formatPrice(selectedVariant?.pricing?.priceUndiscounted)}
                     </span>
                   )}
                 </div>
+
+                {/* Quantity-based pricing */}
+                {quantity > 1 && (
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-blue-800">
+                        Total for {quantity} items:
+                      </span>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-blue-900">
+                          ${calculateTotalPrice().toFixed(2)}
+                        </span>
+                        {hasDiscount() && (
+                          <div className="text-sm text-blue-600 line-through">
+                            ${calculateDiscountedPrice().toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {isInCart && (
                   <p className="text-sm text-blue-600">
-                    {getItemQuantity(product.id)} in cart
+                    {getCurrentItemQuantity()} in cart
                   </p>
                 )}
               </div>
 
               {/* Description */}
-              {product.description && (
+              {/* {product.description && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     Description
@@ -307,7 +410,7 @@ export default function ProductDetailsClient({
                     dangerouslySetInnerHTML={{ __html: product.description }}
                   />
                 </div>
-              )}
+              )} */}
 
               {/* Variants */}
               {product.variants && product.variants.length > 1 && (
@@ -414,31 +517,55 @@ export default function ProductDetailsClient({
                   </div>
                 </div>
 
-                <button
-                  onClick={handleAddToCart}
-                  disabled={
-                    !isAuthenticated ||
-                    cartLoading ||
-                    !product.isAvailableForPurchase
-                  }
-                  className={`w-full py-4 px-6 rounded-lg font-medium text-lg transition-colors duration-200 ${
-                    isAuthenticated && product.isAvailableForPurchase
-                      ? isInCart
-                        ? "bg-green-600 text-white hover:bg-green-700"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                      : "bg-gray-400 text-gray-600 cursor-not-allowed"
-                  }`}
-                >
-                  {cartLoading
-                    ? "Adding..."
-                    : !isAuthenticated
-                    ? "Login to Add to Cart"
-                    : !product.isAvailableForPurchase
-                    ? "Out of Stock"
-                    : isInCart
-                    ? "Added to Cart"
-                    : "Add to Cart"}
-                </button>
+                {/* Action Buttons */}
+                <div className="space-y-3">
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={
+                      !isAuthenticated ||
+                      cartLoading ||
+                      isAddingToCart ||
+                      !product.isAvailableForPurchase
+                    }
+                    className={`w-full py-4 px-6 rounded-lg font-medium text-lg transition-all duration-200 ${
+                      isAuthenticated &&
+                      product.isAvailableForPurchase &&
+                      !isAddingToCart
+                        ? isInCart
+                          ? "bg-green-600 text-white hover:bg-green-700"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-gray-400 text-gray-600 cursor-not-allowed"
+                    }`}
+                  >
+                    {isAddingToCart || cartLoading
+                      ? "Adding..."
+                      : !isAuthenticated
+                      ? "Login to Add to Cart"
+                      : !product.isAvailableForPurchase
+                      ? "Out of Stock"
+                      : isInCart
+                      ? "Added to Cart"
+                      : "Add to Cart"}
+                  </button>
+
+                  {/* Checkout Button - Shows after adding to cart */}
+                  {showCheckoutButton && (
+                    <div className="space-y-2">
+                      <button
+                        onClick={handleCheckout}
+                        className="w-full py-4 px-6 rounded-lg font-medium text-lg bg-green-600 text-white hover:bg-green-700 transition-all duration-200"
+                      >
+                        Proceed to Checkout
+                      </button>
+                      <button
+                        onClick={handleViewCart}
+                        className="w-full py-3 px-6 rounded-lg font-medium text-blue-600 border-2 border-blue-600 hover:bg-blue-50 transition-all duration-200"
+                      >
+                        View Cart ({totalItems} items)
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Availability */}
@@ -483,6 +610,16 @@ export default function ProductDetailsClient({
           </div>
         </div>
       </div>
+
+      {/* Debug Component (Development Only) */}
+      {/* <ProductDetailsDebug
+        product={product}
+        selectedVariant={selectedVariant}
+        quantity={quantity}
+        calculateTotalPrice={calculateTotalPrice}
+        calculateDiscountedPrice={calculateDiscountedPrice}
+        hasDiscount={hasDiscount}
+      /> */}
     </Layout>
   );
 }

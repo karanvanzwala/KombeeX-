@@ -402,25 +402,6 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Remember Me & Forgot Password */}
-                <div className="flex items-center justify-between animate-fade-in animation-delay-500">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-blue-500 bg-gray-50 border-gray-200 rounded focus:ring-blue-500 focus:ring-2"
-                    />
-                    <span className="ml-2 text-sm text-gray-600">
-                      Remember me
-                    </span>
-                  </label>
-                  <a
-                    href="#"
-                    className="text-sm text-blue-600 hover:text-blue-700 transition-colors duration-200"
-                  >
-                    Forgot password?
-                  </a>
-                </div>
-
                 {/* Submit Button */}
                 <button
                   type="submit"

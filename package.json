@@ -10,10 +10,14 @@
   },
   "dependencies": {
     "@apollo/client": "^3.13.9",
+    "@types/algoliasearch": "^4.0.4",
+    "algoliasearch": "^5.35.0",
+    "framer-motion": "^12.23.12",
     "graphql": "^16.11.0",
     "next": "14.2.5",
     "react": "^18",
     "react-dom": "^18",
+    "search-insights": "^2.17.3",
     "zustand": "^5.0.7"
   },
   "devDependencies": {
