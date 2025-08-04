@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🛒 Headless E-Commerce Project – Interview Task
 
-## Getting Started
+This project is built using **Next.js 14 App Router** with **TypeScript**, **Zustand**, **Tailwind CSS**, **Framer Motion**, **React Hook Form**, **Apollo Client (GraphQL)**, and optionally **Saleor** & **Sanity.io**.  
+It is part of an interview assignment given by Kombee.
 
-First, run the development server:
+---
+
+## 📌 Project Overview
+
+The goal of the project was to:
+
+- Set up a scalable front-end architecture using modern technologies.
+- Implement login functionality.
+- Integrate GraphQL using Apollo Client.
+- Prepare for integration with e-commerce APIs (e.g. Saleor) or provided custom APIs (Postman collection).
+- Design a clean and responsive UI.
+
+---
+
+## 🔧 Tech Stack
+
+- **Next.js 14 (App Router)**
+- **TypeScript**
+- **Zustand** – for state management
+- **Tailwind CSS** – for styling
+- **React Hook Form** – for form handling
+- **Framer Motion** – for animations
+- **Apollo Client** – for GraphQL integration
+- **(Optional) Saleor** – for e-commerce backend
+- **(Optional) Sanity.io** – for CMS (blogs, banners, SEO)
+
+---
+
+## ✅ Features Implemented
+
+- [x] Project setup with modern stack
+- [x] Responsive login page (UI + logic)
+- [x] Apollo Client integrated for future GraphQL queries
+- [x] Zustand configured for global state management (Auth, Cart)
+- [x] Folder structure optimized for scalability
+
+---
+
+## ⚠️ Challenges Faced
+
+- It was not fully clear whether the project should:
+  - Use the provided **Postman API collection**, or
+  - Use platforms like **Saleor** and **Sanity.io** to build the backend.
+- Some key data (like `price`, `slug`, and `channel`) were missing in the API responses, which made it difficult to complete certain flows (like product details or checkout).
+- Due to the limited time, I focused on setting up the architecture and implementing login flow, with room to scale up.
+
+---
+
+## 🚀 How to Run Locally
 
 ```bash
+git clone https://github.com/karanvanzwala/KombeeX-.git
+cd Kombeex
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
