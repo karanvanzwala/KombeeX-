@@ -57,4 +57,4 @@ The goal of the project was to:
 git clone https://github.com/karanvanzwala/KombeeX-.git
 cd Kombeex
 npm install
-npm run dev
+npm run dev    
