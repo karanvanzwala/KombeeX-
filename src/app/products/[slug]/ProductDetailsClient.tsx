@@ -242,7 +242,7 @@ export default function ProductDetailsClient({
         </div>
       )}
 
-      <div className="min-h-screen bg-gradient-to-br mt-10 from-slate-50 to-slate-100 py-8">
+      <div className="min-h-screen bg-gradient-to-br md:mt-[50px] mt-10  from-slate-50 to-slate-100 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Breadcrumb */}
           <nav className="flex mb-8" aria-label="Breadcrumb">
